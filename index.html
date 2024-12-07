@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <title>Xmas Tree</title>
+    <style>
+        body {
+            cursor: none; /* Hide the default cursor */
+            margin: 0;
+            padding: 0;
+        }
+
+        #pdf-container {
+            width: 100%;
+            height: 100vh;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            z-index: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            z-index: 0;
+        }
+
+        .audio-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 1;
+        }
+
+        button {
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Custom candy cane cursor */
+        .custom-cursor {
+            position: fixed;
+            pointer-events: none;
+            font-size: 55px;
+            color: red; /* Candy Cane color */
+            z-index: 9999;
+            transition: transform 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <audio id="music" loop>
+        <source src="Jingle.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+
+    <div id="pdf-container">
+        <!-- All pages will be appended here -->
+    </div>
+
+    <!-- Audio controls -->
+    <div class="audio-controls">
+        <button id="play-button" title="Play/Pause">▶️</button>
+        <button id="mute-button" title="Mute/Unmute">🔊</button>
+    </div>
+
+    <script>
+        // Custom cursor management API
+        const cursorAPI = {
+            setCursor: function(cursorURL) {
+                document.body.style.cursor = `none`; // Hide the default cursor
+                document.querySelector('.custom-cursor').style.display = 'block'; // Show custom cursor
+            },
+            resetCursor: function() {
+                document.querySelector('.custom-cursor').style.display = 'none'; // Hide custom cursor
+            }
+        };
+
+        // Set worker source for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+
+        const url = 'Festiveeee.pdf';
+        const container = document.getElementById('pdf-container');
+        const audioElement = document.getElementById('music');
+        const playButton = document.getElementById('play-button');
+        const muteButton = document.getElementById('mute-button');
+
+        // Set volume (adjust this value as needed)
+        audioElement.volume = 0.5;
+
+        // Toggle play/pause
+        playButton.addEventListener('click', function () {
+            if (audioElement.paused) {
+                audioElement.play().then(() => {
+                    playButton.textContent = '⏸️'; // Change to pause icon
+                }).catch(err => {
+                    console.error('Error playing audio:', err);
+                });
+            } else {
+                audioElement.pause();
+                playButton.textContent = '▶️'; // Change to play icon
+            }
+        });
+
+        // Toggle mute/unmute
+        muteButton.addEventListener('click', function () {
+            audioElement.muted = !audioElement.muted;
+            muteButton.textContent = audioElement.muted ? '🔇' : '🔊';
+        });
+
+        // Load PDF file
+        pdfjsLib.getDocument(url).promise.then(function (pdf) {
+            const totalPages = pdf.numPages;
+
+            // Render all pages
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                pdf.getPage(pageNum).then(function (page) {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    const scale = 1.5;  // Adjust this scale for different zoom levels
+                    const viewport = page.getViewport({ scale: scale });
+
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // Render PDF page on canvas
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+
+                    // Append the canvas to the container
+                    container.appendChild(canvas);
+                });
+            }
+        });
+
+        // Removed the autoplay behavior from body click event
+        // This is the section that used to start the sound when you clicked anywhere on the page
+        // document.body.addEventListener('click', function () {
+        //     if (audioElement.paused) {
+        //         audioElement.play().catch(err => {
+        //             console.error('Error playing audio:', err);
+        //         });
+        //     }
+        // }, { once: true }); // Ensure this event is executed only once
+
+        // Create a div to act as the custom cursor
+        const cursor = document.createElement('div');
+        cursor.classList.add('custom-cursor');
+        cursor.innerHTML = '<i class="fa-solid fa-candy-cane"></i>';
+        document.body.appendChild(cursor);
+
+        // Mousemove event to update cursor position
+        document.addEventListener('mousemove', function (e) {
+            cursor.style.left = e.pageX - cursor.offsetWidth / 2 + 'px';
+            cursor.style.top = e.pageY - cursor.offsetHeight / 2 + 'px';
+        });
+
+        // Change the cursor when the mouse enters the page
+        window.addEventListener('mouseenter', function() {
+            cursorAPI.setCursor(); // Activate custom cursor
+        });
+
+        // Optionally, you can reset the cursor when the mouse leaves the page
+        window.addEventListener('mouseleave', function() {
+            cursorAPI.resetCursor(); // Reset to default cursor
+        });
+    </script>
+</body>
+</html>
